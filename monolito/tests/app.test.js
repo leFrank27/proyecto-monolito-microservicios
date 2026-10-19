@@ -1,5 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
+const pool = require('../src/db');
 
 test('GET /health debe responder correctamente', async () => {
   const response = await request(app).get('/health');
@@ -24,3 +25,7 @@ test('GET /pedidos debe devolver pedidos', async () => {
   expect(response.statusCode).toBe(200);
   expect(response.body.length).toBeGreaterThan(0);
 });
+
+afterAll(async () => {
+  await pool.end();
+});;
