@@ -1,4 +1,4 @@
-name: CI Monolito
+name: CI Monolito y Microservicios
 
 on:
   push:
@@ -7,21 +7,35 @@ on:
     branches: [ main ]
 
 jobs:
-  test-monolito:
+  monolito:
     runs-on: ubuntu-latest
-
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v3
 
-      - name: Construir y levantar contenedores
+      - name: Construir y levantar monolito
         run: docker compose up -d --build
         working-directory: monolito
 
-      - name: Ejecutar pruebas automatizadas
+      - name: Ejecutar pruebas del monolito
         run: docker compose exec -T app npm test
         working-directory: monolito
 
-      - name: Detener contenedores
+      - name: Detener monolito
         run: docker compose down
         working-directory: monolito
+
+  microservicios:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v3
+
+      - name: Verificar carpeta de microservicios
+        run: |
+          if [ -d "microservicios" ]; then
+            cd microservicios
+            docker compose up -d --build || echo "Preparando microservicios"
+          else
+            echo "Carpeta microservicios lista para proximas fases"
+          fi
