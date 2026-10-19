@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monolito-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monolito-db
+  template:
+    metadata:
+      labels:
+        app: monolito-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: "usuario_app"
+            - name: POSTGRES_PASSWORD
+              value: "clave_segura_123"
+            - name: POSTGRES_DB
+              value: "proyecto_app"
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monolito-db
+spec:
+  selector:
+    app: monolito-db
+  ports:
+    - port: 5432
+      targetPort: 5432
