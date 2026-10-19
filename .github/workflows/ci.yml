@@ -1,0 +1,27 @@
+name: CI Monolito
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-monolito:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v3
+
+      - name: Construir y levantar contenedores
+        run: docker compose up -d --build
+        working-directory: monolito
+
+      - name: Ejecutar pruebas automatizadas
+        run: docker compose exec -T app npm test
+        working-directory: monolito
+
+      - name: Detener contenedores
+        run: docker compose down
+        working-directory: monolito
