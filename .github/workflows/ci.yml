@@ -2,16 +2,17 @@ name: CI Monolito y Microservicios
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   monolito:
     runs-on: ubuntu-latest
+
     steps:
       - name: Descargar codigo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Construir y levantar monolito
         run: docker compose up -d --build
@@ -22,20 +23,49 @@ jobs:
         working-directory: monolito
 
       - name: Detener monolito
+        if: always()
         run: docker compose down
         working-directory: monolito
 
-  microservicios:
+  pruebas-microservicios:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio:
+          - microservicios/usuarios-service
+          - microservicios/productos-service
+          - microservicios/pedidos-service
+
     steps:
       - name: Descargar codigo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Verificar carpeta de microservicios
-        run: |
-          if [ -d "microservicios" ]; then
-            cd microservicios
-            docker compose up -d --build || echo "Preparando microservicios"
-          else
-            echo "Carpeta microservicios lista para proximas fases"
-          fi
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.servicio }}/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+        working-directory: ${{ matrix.servicio }}
+
+      - name: Ejecutar pruebas automaticas
+        run: npm test
+        working-directory: ${{ matrix.servicio }}
+
+  construir-microservicios:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Validar configuracion Docker
+        run: docker compose config --quiet
+
+      - name: Construir imagenes
+        run: docker compose build

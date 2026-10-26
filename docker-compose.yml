@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: usuario_app
+      POSTGRES_PASSWORD: password_segura
+      POSTGRES_DB: proyecto_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  usuarios-service:
+    build: ./microservicios/usuarios-service
+    container_name: usuarios_service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DB_HOST=db
+      - DB_USER=usuario_app
+      - DB_PASSWORD=password_segura
+      - DB_NAME=proyecto_app
+      - DB_PORT=5432
+    depends_on:
+      - db
+
+  productos-service:
+    build: ./microservicios/productos-service
+    container_name: productos_service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - DB_HOST=db
+      - DB_USER=usuario_app
+      - DB_PASSWORD=password_segura
+      - DB_NAME=proyecto_app
+      - DB_PORT=5432
+    depends_on:
+      - db
+
+  pedidos-service:
+    build: ./microservicios/pedidos-service
+    container_name: pedidos_service
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - DB_HOST=db
+      - DB_USER=usuario_app
+      - DB_PASSWORD=password_segura
+      - DB_NAME=proyecto_app
+      - DB_PORT=5432
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

@@ -1,0 +1,102 @@
+const express = require('express');
+const { Pool } = require('pg');
+
+const app = express();
+app.use(express.json());
+
+const pool = new Pool({
+  host: process.env.DB_HOST || 'db',
+  user: process.env.DB_USER || 'usuario_app',
+  password: process.env.DB_PASSWORD || 'password_segura',
+  database: process.env.DB_NAME || 'proyecto_app',
+  port: process.env.DB_PORT || 5432,
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', service: 'productos-service' });
+});
+
+app.get('/productos', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM productos');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
+});
+
+// GET por ID (comunicación con Pedidos)
+app.get('/productos/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM productos WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al consultar producto' });
+  }
+});
+
+// POST: Crear producto
+app.post('/productos', async (req, res) => {
+  const { nombre, precio } = req.body;
+  if (!nombre || precio === undefined || !Number.isFinite(Number(precio)) || Number(precio) < 0) {
+    return res.status(400).json({ error: 'Nombre y precio válido son obligatorios' });
+  }
+  try {
+    const result = await pool.query(
+      'INSERT INTO productos (nombre, precio) VALUES ($1, $2) RETURNING *',
+      [nombre, precio]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al crear producto' });
+  }
+});
+
+// PUT: Actualizar producto
+app.put('/productos/:id', async (req, res) => {
+  const { nombre, precio } = req.body;
+  if (!nombre || precio === undefined || !Number.isFinite(Number(precio)) || Number(precio) < 0) {
+    return res.status(400).json({ error: 'Nombre y precio válido son obligatorios' });
+  }
+  try {
+    const result = await pool.query(
+      'UPDATE productos SET nombre = $1, precio = $2 WHERE id = $3 RETURNING *',
+      [nombre, precio, req.params.id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar producto' });
+  }
+});
+
+// DELETE: Eliminar producto
+app.delete('/productos/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM productos WHERE id = $1 RETURNING *',
+      [req.params.id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.json({ mensaje: 'Producto eliminado', producto: result.rows[0] });
+  } catch (error) {
+    if (error.code === '23503') {
+      return res.status(409).json({ error: 'No se puede eliminar un producto asociado a pedidos' });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+});
+
+module.exports = app;

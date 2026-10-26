@@ -4,4 +4,4 @@ COPY package*.json ./
 RUN npm install --production
 COPY . .
 EXPOSE 3003
-CMD ["node", "app.js"]
+CMD ["node", "index.js"]
